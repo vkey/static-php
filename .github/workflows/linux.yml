@@ -31,9 +31,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        php-version: ["8.1", "8.0"]
-        libc: ["glibc", "musl"]
-        arch: ["x86_64", "aarch64"]
+        php-version: ["8.1"]
+        libc: ["musl"]
+        arch: ["x86_64"]
       max-parallel: 8
     steps:
       - name: Checkout
@@ -221,57 +221,6 @@ jobs:
             --cc=${{ steps.prepare.outputs.cc }} \
             --cxx=${{ steps.prepare.outputs.cxx }} \
             --arch=${{ matrix.arch }}
-
-      - name: Build micro
-        if: "! (github.event.inputs && github.event.inputs.lib_only)"
-        id: micro_shared
-        continue-on-error: true
-        run: |
-          set -xeo pipefail
-          export "PATH=/opt/rh/devtoolset-11/root/usr/bin:/opt/php/bin:/opt/cmake/bin:$PATH"
-          cd /
-          php ${GITHUB_WORKSPACE}/build_micro.php \
-            "${{ (github.event.inputs && github.event.inputs.libraries) || env.LWMBS_LIBRARIES }}" \
-            "${{ (github.event.inputs && github.event.inputs.extensions) || env.LWMBS_EXTENSIONS }}" \
-            --cc=${{ steps.prepare.outputs.cc }} \
-            --cxx=${{ steps.prepare.outputs.cxx }} \
-            --arch=${{ matrix.arch }}
-          cp src/php-src/sapi/micro/micro.sfx src/php-src/sapi/micro/micro.sfx.debug ${GITHUB_WORKSPACE}/micro_shared/
-
-      - name: Upload artifact for micro
-        if: steps.micro_shared.outcome == 'success'
-        uses: actions/upload-artifact@v3
-        with:
-          name: micro_shared_${{ matrix.php-version }}_${{ matrix.libc }}_${{ matrix.arch }}_${{ steps.src_hash.outputs.hash }}
-          path: |
-            micro_shared
-
-      - name: Build micro static
-        if: |
-          (!(github.event.inputs && github.event.inputs.lib_only)) &&
-          matrix.libc != 'glibc'
-        id: micro_static
-        continue-on-error: true
-        run: |
-          set -xeo pipefail
-          export "PATH=/opt/rh/devtoolset-11/root/usr/bin:/opt/php/bin:/opt/cmake/bin:$PATH"
-          cd /
-          php ${GITHUB_WORKSPACE}/build_micro.php \
-            "${{ (github.event.inputs && github.event.inputs.libraries) || env.LWMBS_LIBRARIES }}" \
-            "${{ (github.event.inputs && github.event.inputs.extensions) || env.LWMBS_EXTENSIONS }}" \
-            --cc=${{ steps.prepare.outputs.cc }} \
-            --cxx=${{ steps.prepare.outputs.cxx }} \
-            --arch=${{ matrix.arch }} \
-            --allStatic
-          cp src/php-src/sapi/micro/micro.sfx src/php-src/sapi/micro/micro.sfx.debug ${GITHUB_WORKSPACE}/micro_static/
-
-      - name: Upload artifact for micro static
-        if: steps.micro_static.outcome == 'success'
-        uses: actions/upload-artifact@v3
-        with:
-          name: micro_static_${{ matrix.php-version }}_${{ matrix.libc }}_${{ matrix.arch }}_${{ steps.src_hash.outputs.hash }}
-          path: |
-            micro_static
 
       - name: Build micro-cli
         if: "! (github.event.inputs && github.event.inputs.lib_only)"
